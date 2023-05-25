@@ -3,6 +3,7 @@ package logic
 import (
 	"fmt"
 	"path"
+	"poker/dao"
 	"poker/model"
 	"runtime"
 	"sort"
@@ -11,47 +12,49 @@ import (
 
 // cardCom用于同类型比较的函数传递参数
 type cardCom struct {
-	cardSizeMap1 map[model.CardFace]int
-	cardSizeMap2 map[model.CardFace]int
-	max1, max2   byte
+	cardSizeMap1 map[model.CardSize]int
+	cardSizeMap2 map[model.CardSize]int
+	max1, max2   model.CardSize
 }
 
 // JudgmentGroupNew 判断牌的类型
-func JudgmentGroupNew(card string) (model.CardType, map[model.CardFace]int, byte) {
-	var resMax byte
+func JudgmentGroupNew(card string) (model.CardType, map[model.CardSize]int, model.CardSize) {
+	var resMax model.CardSize
 	var judeCardType model.CardType
 	// 扫描牌 分别放好大小，花色   --key放的是花色或是面值，--value放的是出现的次数
-	facesMap, colorsMap := CardsSplitMapCount(card)
+	sizeMap, colorsMap, cardsSize := CardsSplitMapCount(card)
 	// 获取map的长度
-	facesLen := len(facesMap)
+	sizeLen := len(sizeMap)
 	colorLen := len(colorsMap)
 	// 同花的时候，5个颜色一样，所以 colorLen = 1
 	if colorLen > 1 {
 		// 非同花
-		switch facesLen {
+		switch sizeLen {
 		case 4:
 			// 一对
 			judeCardType = model.OnePair
 		case 2: // 3带2  或是 4带1
 			// 遍历map value
 			judeCardType = model.FullHouse
-			for _, v := range facesMap {
+			for _, v := range sizeMap {
 				if v == 4 {
 					judeCardType = model.FourHouse
+					break
 				}
 			}
 		case 3:
 			// 3条 或是 两对
 			judeCardType = model.TwoPair
-			for _, v := range facesMap {
+			for _, v := range sizeMap {
 				if v == 3 {
 					judeCardType = model.ThreeOfAKind
+					break
 				}
 			}
 		case 5:
 			// 单牌或是顺子
 			judeCardType = model.HighCard
-			isShun, max := IsShunZiNew([]byte(card))
+			isShun, max := IsShunZiNew(cardsSize, sizeMap)
 			if isShun {
 				resMax = max
 				judeCardType = model.Straight
@@ -59,57 +62,33 @@ func JudgmentGroupNew(card string) (model.CardType, map[model.CardFace]int, byte
 			}
 		}
 	} else {
-		// 同花 或是 同花顺
+		// 同花 或是 同花顺 皇家同花顺
 		judeCardType = model.Flush
-		isShun, max := IsShunZiNew([]byte(card))
+		isShun, max := IsShunZiNew(cardsSize, sizeMap)
 		if isShun {
 			resMax = max
-			judeCardType = model.RoyalFlush
+			judeCardType = model.StraightFlush
+			if max == model.CardSizeAce {
+				judeCardType = model.RoyalFlush
+			}
 		}
 	}
-	return judeCardType, facesMap, resMax
+	return judeCardType, sizeMap, resMax
 }
 
 // IsShunZiNew 判断是否是顺子 返回顺子的最大值和是否是顺子
-func IsShunZiNew(card []byte) (shunZi bool, max byte) {
+// 51.02 ns/op
+func IsShunZiNew(cardsSize []model.CardSize, sizeMap map[model.CardSize]int) (shunZi bool, max model.CardSize) {
 	shunZi = false
-	saves := make([]byte, 14)
+	saves := make([]model.CardSize, 16)
 	// 把扑克牌放如slice中
-	for i, v := range card {
-		if i%2 == 0 {
-			switch model.CardFace(v) {
-			case model.Two:
-				saves[1] = v
-			case model.Three:
-				saves[2] = v
-			case model.Four:
-				saves[3] = v
-			case model.Five:
-				saves[4] = v
-			case model.Six:
-				saves[5] = v
-			case model.Seven:
-				saves[6] = v
-			case model.Eight:
-				saves[7] = v
-			case model.Nine:
-				saves[8] = v
-			case model.Ten:
-				saves[9] = v
-			case model.Jack:
-				saves[10] = v
-			case model.Queen:
-				saves[11] = v
-			case model.King:
-				saves[12] = v
-			case model.Ace:
-				saves[13] = v
-				saves[0] = v
-			default:
-				panic(fmt.Sprintf("unkown card face=%+v", v))
-			}
-		}
-
+	for _, card := range cardsSize {
+		saves[card] = card
+	}
+	aceSize := model.CardFaceMap[model.Ace]
+	_, ok := sizeMap[aceSize]
+	if ok {
+		saves[1] = aceSize
 	}
 	// 判断数组是否连续 倒序遍历
 	sum := 0
@@ -155,7 +134,7 @@ func MyQuickSortCardFace(cards []model.CardFace) []model.CardFace {
 }
 
 // QuickSort 系统排序函数 倒序
-func QuickSort(cards []model.CardFace) {
+func QuickSort(cards []model.CardSize) {
 	sort.Slice(cards, func(i, j int) bool {
 		return cards[i] > cards[j]
 	})
@@ -164,18 +143,18 @@ func QuickSort(cards []model.CardFace) {
 // SingleCardCompareSizeNew 同类型单牌比较 返回值是比较结果 0是平局 1是前面赢 2是后面赢
 func (com *cardCom) SingleCardCompareSizeNew() model.Result {
 
-	cardSizeSlice1 := make([]model.CardFace, len(com.cardSizeMap1))
-	cardSizeSlice2 := make([]model.CardFace, len(com.cardSizeMap1))
+	cardSizeSlice1 := make([]model.CardSize, len(com.cardSizeMap1))
+	cardSizeSlice2 := make([]model.CardSize, len(com.cardSizeMap1))
 
 	// 遍历map，把面值放到slice中
 	i := 0
 	for k := range com.cardSizeMap1 {
-		cardSizeSlice1[i] = model.CardFace(SizeTranByte(k))
+		cardSizeSlice1[i] = k
 		i++
 	}
 	i = 0
 	for k := range com.cardSizeMap2 {
-		cardSizeSlice2[i] = model.CardFace(SizeTranByte(k))
+		cardSizeSlice2[i] = k
 		i++
 	}
 
@@ -184,7 +163,7 @@ func (com *cardCom) SingleCardCompareSizeNew() model.Result {
 }
 
 // SingleCardSizeCom 对比单牌 大小0是平局 1是前面赢 2是后面赢
-func SingleCardSizeCom(comLen int, cardSizeSlice1, cardSizeSlice2 []model.CardFace) model.Result {
+func SingleCardSizeCom(comLen int, cardSizeSlice1, cardSizeSlice2 []model.CardSize) model.Result {
 	// 对传进来的slice逆序排序
 	QuickSort(cardSizeSlice1)
 	QuickSort(cardSizeSlice2)
@@ -203,14 +182,13 @@ func SingleCardSizeCom(comLen int, cardSizeSlice1, cardSizeSlice2 []model.CardFa
 // aPairComNew 同类型一对比较 0是平局 1是前面赢 2是后面赢
 func (com *cardCom) aPairComNew() model.Result {
 	// 用于存放单牌的面值
-	cardSizeSlice1 := make([]model.CardFace, len(com.cardSizeMap1))
-	cardSizeSlice2 := make([]model.CardFace, len(com.cardSizeMap1))
+	cardSizeSlice1 := make([]model.CardSize, len(com.cardSizeMap1))
+	cardSizeSlice2 := make([]model.CardSize, len(com.cardSizeMap1))
 	// 用于存放对子的面值
-	var pair1 model.CardFace
-	var pair2 model.CardFace
+	var pair1 model.CardSize
+	var pair2 model.CardSize
 	i := 0
 	for k, v := range com.cardSizeMap1 {
-		k = model.CardFace(SizeTranByte(k)) // 对牌子转译，才可以比较大小
 		if v == 2 {
 			pair1 = k
 		} else {
@@ -221,10 +199,10 @@ func (com *cardCom) aPairComNew() model.Result {
 	i = 0
 	for k, v := range com.cardSizeMap2 {
 		if v == 2 {
-			pair2 = model.CardFace(SizeTranByte(k))
+			pair2 = k
 
 		} else {
-			cardSizeSlice2[i] = model.CardFace(SizeTranByte(k))
+			cardSizeSlice2[i] = k
 			i++
 		}
 	}
@@ -246,15 +224,15 @@ func (com *cardCom) aPairComNew() model.Result {
 func (com *cardCom) twoPairComNew() model.Result {
 	// 用于存放两对的牌子
 	num := 2
-	pairs1 := make([]model.CardFace, num)
-	pairs2 := make([]model.CardFace, num)
+	pairs1 := make([]model.CardSize, num)
+	pairs2 := make([]model.CardSize, num)
 	// 用于存放单牌
-	var val1 model.CardFace
-	var val2 model.CardFace
+	var val1 model.CardSize
+	var val2 model.CardSize
 
 	i := 0
 	for k, v := range com.cardSizeMap1 {
-		k = model.CardFace(SizeTranByte(k)) // 转译面值成可以比较的
+
 		if v == 2 {
 			pairs1[i] = k
 			i++
@@ -264,7 +242,6 @@ func (com *cardCom) twoPairComNew() model.Result {
 	}
 	i = 0
 	for k, v := range com.cardSizeMap2 {
-		k = model.CardFace(SizeTranByte(k))
 		if v == 2 {
 			pairs2[i] = k
 			i++
@@ -294,14 +271,13 @@ func (com *cardCom) twoPairComNew() model.Result {
 // onlyThreeComNew 同类型的三条比较 0是平局 1是前面赢 2是后面赢
 func (com *cardCom) onlyThreeComNew() model.Result {
 	// 用于存放单牌的面值
-	cardSizeSlice1 := make([]model.CardFace, len(com.cardSizeMap1))
-	cardSizeSlice2 := make([]model.CardFace, len(com.cardSizeMap1))
+	cardSizeSlice1 := make([]model.CardSize, len(com.cardSizeMap1))
+	cardSizeSlice2 := make([]model.CardSize, len(com.cardSizeMap1))
 	// 用于存放三条的面值
-	var three1 model.CardFace
-	var three2 model.CardFace
+	var three1 model.CardSize
+	var three2 model.CardSize
 	i := 0
 	for k, v := range com.cardSizeMap1 {
-		k = model.CardFace(SizeTranByte(k))
 		cardSizeSlice1[i] = k
 		if v == 3 {
 			three1 = k
@@ -311,7 +287,6 @@ func (com *cardCom) onlyThreeComNew() model.Result {
 	}
 	i = 0
 	for k, v := range com.cardSizeMap2 {
-		k = model.CardFace(SizeTranByte(k))
 		cardSizeSlice2[i] = k
 		if v == 3 {
 			three2 = k
@@ -331,40 +306,38 @@ func (com *cardCom) onlyThreeComNew() model.Result {
 }
 
 // onlyShunZiNew 同类型顺子的比较 0是平局 1是前面赢 2是后面赢
-func (com *cardCom) onlyShunZiNew() (result int) {
+func (com *cardCom) onlyShunZiNew() model.Result {
 	// max 是顺子的最大的牌，只要比较这张牌就行了
 	if com.max1 > com.max2 {
-		return 1
+		return model.Win
 	} else if com.max1 < com.max2 {
-		return 2
+		return model.Lose
 	}
-	return 0
+	return model.Draw
 }
 
 // onlySameFlowerNew 是同类型同花的比较 0是平局 1是前面赢 2是后面赢
-func (com *cardCom) onlySameFlowerNew() (result int) {
+func (com *cardCom) onlySameFlowerNew() model.Result {
 	// 同类型同花 只要比较牌面值最大的，可以看着是单牌比较面值大小
-	result = com.SingleCardCompareSizeNew()
-	return
+	return com.SingleCardCompareSizeNew()
 }
 
 // straightFlushNew 同类型同花顺比较 0是平局 1是前面赢 2是后面赢
-func (com *cardCom) straightFlushNew() (result int) {
+func (com *cardCom) straightFlushNew() model.Result {
 	// 同类型同花顺比较，可以看作顺子之间比较
 	return com.onlyShunZiNew()
 }
 
 // fourComNew 同类型4条比较 0是平局 1是前面赢 2是后面赢
-func (com *cardCom) fourComNew() (result int) {
+func (com *cardCom) fourComNew() model.Result {
 	// 存放四条的面值
-	var four1 byte
-	var four2 byte
+	var four1 model.CardSize
+	var four2 model.CardSize
 	// 存放单牌的面值
-	var val1 byte
-	var val2 byte
+	var val1 model.CardSize
+	var val2 model.CardSize
 
 	for k, v := range com.cardSizeMap1 {
-		k = SizeTranByte(k) // 对面值转译成可以比较的
 		if v == 4 {
 			four1 = k
 		} else {
@@ -372,7 +345,6 @@ func (com *cardCom) fourComNew() (result int) {
 		}
 	}
 	for k, v := range com.cardSizeMap2 {
-		k = SizeTranByte(k) // 对面值转译成可以比较的
 		if v == 4 {
 			four2 = k
 		} else {
@@ -381,56 +353,56 @@ func (com *cardCom) fourComNew() (result int) {
 	}
 	// 先比较4条大小
 	if four1 > four2 {
-		return 1
+		return model.Win
 	} else if four1 < four2 {
-		return 2
+		return model.Lose
 	} else {
 		// 再比较单牌的大小
 		if val1 > val2 {
-			return 1
+			return model.Win
 		} else if val1 < val2 {
-			return 2
+			return model.Lose
 		} else {
-			return 0
+			return model.Draw
 		}
 	}
 }
 
 // threeAndTwoNew 同类型3带2比较  0是平局 1是前面赢 2是后面赢
-func (com *cardCom) threeAndTwoNew() (result int) {
+func (com *cardCom) threeAndTwoNew() model.Result {
 	// 存放3条的面值
-	var three1 byte
-	var three2 byte
+	var three1 model.CardSize
+	var three2 model.CardSize
 	// 存放对子的面值
-	var two1 byte
-	var two2 byte
+	var two1 model.CardSize
+	var two2 model.CardSize
 	for k, v := range com.cardSizeMap1 {
 		if v == 3 {
-			three1 = SizeTranByte(k)
+			three1 = k
 		} else {
-			two1 = SizeTranByte(k)
+			two1 = k
 		}
 	}
 	for k, v := range com.cardSizeMap2 {
 		if v == 3 {
-			three2 = SizeTranByte(k)
+			three2 = k
 		} else {
-			two2 = SizeTranByte(k)
+			two2 = k
 		}
 	}
 	// 先对比3条的面值
 	if three1 > three2 {
-		return 1
+		return model.Win
 	} else if three1 < three2 {
-		return 2
+		return model.Lose
 	} else {
 		// 再对比对子的面值
 		if two1 > two2 {
-			return 1
+			return model.Win
 		} else if two1 < two2 {
-			return 2
+			return model.Lose
 		} else {
-			return 0
+			return model.Draw
 		}
 	}
 
@@ -447,63 +419,71 @@ func GetCurrentAbPathByCaller() string {
 	return abPath
 }
 
+func compare(alices, bobs string) model.Result {
+
+	var result model.Result = -1
+	// 分牌型
+	val1, cardSizesMap1, max1 := JudgmentGroupNew(alices)
+	val2, cardSizesMap2, max2 := JudgmentGroupNew(bobs)
+	if val1 < val2 {
+		result = model.Win
+	} else if val1 > val2 {
+		result = model.Lose
+	} else {
+		// 牌型相同的处理情况
+		// ...
+		cardCom := cardCom{
+			cardSizeMap1: cardSizesMap1,
+			cardSizeMap2: cardSizesMap2,
+			max1:         max1,
+			max2:         max2,
+		}
+		switch val1 {
+		case model.HighCard:
+			// 同类型下的单张大牌比较
+			result = cardCom.SingleCardCompareSizeNew()
+		case model.OnePair:
+			// 同类型的一对
+			result = cardCom.aPairComNew()
+		case model.TwoPair:
+			// 同类型两对
+			result = cardCom.twoPairComNew()
+		case model.ThreeOfAKind:
+			// 同类型三条
+			result = cardCom.onlyThreeComNew()
+		case model.Straight:
+			// 同类型顺子
+			result = cardCom.onlyShunZiNew()
+		case model.Flush:
+			// 同类型同花
+			result = cardCom.onlySameFlowerNew()
+		case model.FullHouse:
+			// 同类型3带2
+			result = cardCom.threeAndTwoNew()
+		case model.FourHouse:
+			// 同类型四条
+			result = cardCom.fourComNew()
+		case model.StraightFlush: // 同类型同花顺
+			result = cardCom.straightFlushNew()
+		case model.RoyalFlush:
+			//皇家同花顺
+			result = model.Draw
+		}
+		// 最后比较结果
+	}
+	return result
+}
+
 // PokerMan 5张遍历判断 文件扑克牌的函数
 func PokerMan() {
 	file := GetCurrentAbPathByCaller()
 	file += "/resources/match_result.json"
-	alices, bobs, results := ReadFile(file)
+	alices, bobs, results := dao.ReadFile(file)
 	t1 := time.Now()
 	k := 0
 	// 遍历全部对比
 	for i := 0; i < len(alices); i++ {
-		result := -1
-		// 分牌型
-		val1, cardSizesMap1, max1 := JudgmentGroupNew(alices[i])
-		val2, cardSizesMap2, max2 := JudgmentGroupNew(bobs[i])
-		if val1 < val2 {
-			result = 1
-		} else if val1 > val2 {
-			result = 2
-		} else {
-			// 牌型相同的处理情况
-			// ...
-			cardCom := cardCom{
-				cardSizeMap1: cardSizesMap1,
-				cardSizeMap2: cardSizesMap2,
-				max1:         max1,
-				max2:         max2,
-			}
-			switch val1 {
-			case 10:
-				// 同类型下的单张大牌比较
-				result = cardCom.SingleCardCompareSizeNew()
-			case 9:
-				// 同类型的一对
-				result = cardCom.aPairComNew()
-			case 8:
-				// 同类型两对
-				result = cardCom.twoPairComNew()
-			case 7:
-				// 同类型三条
-				result = cardCom.onlyThreeComNew()
-			case 6:
-				// 同类型顺子
-				result = cardCom.onlyShunZiNew()
-			case 5:
-				// 同类型同花
-				result = cardCom.onlySameFlowerNew()
-			case 4:
-				// 同类型3带2
-				result = cardCom.threeAndTwoNew()
-			case 3:
-				// 同类型四条
-				result = cardCom.fourComNew()
-			case 1: // 同类型同花顺
-				result = cardCom.straightFlushNew()
-			}
-
-			// 最后比较结果
-		}
+		result := compare(alices[i], bobs[i])
 		// 打印判断出错的信息
 		if result != results[i] {
 			k++
@@ -530,27 +510,22 @@ func CardsSplit(cards string) ([]model.CardFace, []model.CardColor) {
 	return faces, colors
 }
 
-// CardsSplitMapCount 统计手牌中面值和花色的数量
-func CardsSplitMapCount(cards string) (map[model.CardFace]int, map[model.CardColor]int) {
-	num := len(cards) / 2
-	facesMap := make(map[model.CardFace]int, num)
+// CardsSplitMapCount 统计手牌中面值和花色的数量 并且把面值转换为可比较大小的
+// 724.7 ns/op -> 429.0 ns/op(直接map++而不取出来判断是否已经存在key) ->374.8 ns/op (用下标赋值而不用append,除2用位运算)
+func CardsSplitMapCount(cards string) (map[model.CardSize]int, map[model.CardColor]int, []model.CardSize) {
+	num := len(cards) >> 1
+	sizeMap := make(map[model.CardSize]int, num)
 	colorsMap := make(map[model.CardColor]int, num)
+	cardsSize := make([]model.CardSize, num)
 	for index, value := range cards {
 		if index%2 == 0 {
-			fv := model.CardFace(value)
-			if _, ok := facesMap[fv]; ok {
-				facesMap[fv]++
-			} else {
-				facesMap[fv] = 1
-			}
+			sv := SizeTranByte(model.CardFace(value))
+			cardsSize[index>>1] = sv
+			sizeMap[sv]++
 		} else {
 			cv := model.CardColor(value)
-			if _, ok := colorsMap[cv]; ok {
-				colorsMap[cv]++
-			} else {
-				colorsMap[cv] = 1
-			}
+			colorsMap[cv]++
 		}
 	}
-	return facesMap, colorsMap
+	return sizeMap, colorsMap, cardsSize
 }

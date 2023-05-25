@@ -81,19 +81,38 @@ const (
 	Joker CardFace = 'X'
 )
 
-var CardFaceMap = map[CardFace]byte{
-	Two:   0x02,
-	Three: 0x03,
-	Four:  0x04,
-	Five:  0x05,
-	Six:   0x06,
-	Seven: 0x07,
-	Eight: 0x08,
-	Nine:  0x09,
-	Ten:   0x0A,
-	Jack:  0x0B,
-	Queen: 0x0C,
-	King:  0x0D,
-	Ace:   0x0E,
-	Joker: 0x10,
+type CardSize byte
+
+const (
+	CardSizeTwo   CardSize = 0x02
+	CardSizeThree CardSize = 0x03
+	CardSizeFour  CardSize = 0x04
+	CardSizeFive  CardSize = 0x05
+	CardSizeSix   CardSize = 0x06
+	CardSizeSeven CardSize = 0x07
+	CardSizeEight CardSize = 0x08
+	CardSizeNine  CardSize = 0x09
+	CardSizeTen   CardSize = 0x0A
+	CardSizeJack  CardSize = 0x0B
+	CardSizeQueen CardSize = 0x0C
+	CardSizeKing  CardSize = 0x0D
+	CardSizeAce   CardSize = 0x0E
+	CardSizeJoker CardSize = 0x10
+)
+
+var CardFaceMap = map[CardFace]CardSize{
+	Two:   CardSizeTwo,
+	Three: CardSizeThree,
+	Four:  CardSizeFour,
+	Five:  CardSizeFive,
+	Six:   CardSizeSix,
+	Seven: CardSizeSeven,
+	Eight: CardSizeEight,
+	Nine:  CardSizeNine,
+	Ten:   CardSizeTen,
+	Jack:  CardSizeJack,
+	Queen: CardSizeQueen,
+	King:  CardSizeKing,
+	Ace:   CardSizeAce,
+	Joker: CardSizeJoker,
 }
