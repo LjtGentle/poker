@@ -109,6 +109,38 @@ func IsShunZiNew(cardsSize []model.CardSize, sizeMap map[model.CardSize]int) (sh
 	return
 }
 
+//func IsShunZiNew(cardsSize []model.CardSize, sizeMap map[model.CardSize]int) (shunZi bool, max model.CardSize) {
+//	shunZi = false
+//	saves := make([]model.CardSize, 16)
+//	// 把扑克牌放如slice中
+//	for _, card := range cardsSize {
+//		saves[card] = card
+//	}
+//
+//	_, ok := sizeMap[model.CardSizeAce]
+//	if ok {
+//		saves[1] = model.CardSizeAce
+//	}
+//	// 判断数组是否连续 倒序遍历
+//	sum := 0
+//	for i := 0; i < len(saves); i++ {
+//		// slice有值
+//		if saves[i] == 0x00 {
+//			sum = 0
+//		} else {
+//			sum++
+//			// 5个连续
+//			if sum >= 5 {
+//				shunZi = true
+//				max = saves[i] // 返回顺子的最大值
+//				return
+//			}
+//		}
+//
+//	}
+//	return
+//}
+
 // MyQuickSortCardFace 快排 对字节 逆序
 func MyQuickSortCardFace(cards []model.CardFace) []model.CardFace {
 	if len(cards) <= 1 {
