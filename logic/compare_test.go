@@ -14,3 +14,7 @@ func TestIsShunZiNew(t *testing.T) {
 	assert.Equal(t, flag, true)
 	assert.Equal(t, max, model.CardSizeSix)
 }
+
+func TestPokerMain(t *testing.T) {
+	PokerMan()
+}
