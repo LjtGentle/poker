@@ -116,3 +116,24 @@ var CardFaceMap = map[CardFace]CardSize{
 	Ace:   CardSizeAce,
 	Joker: CardSizeJoker,
 }
+
+var CardFace2SizeSlice []CardSize
+
+func init() {
+	CardFace2SizeSlice = make([]CardSize, 100)
+	CardFace2SizeSlice[Two] = CardSizeTwo
+	CardFace2SizeSlice[Three] = CardSizeThree
+	CardFace2SizeSlice[Four] = CardSizeFour
+	CardFace2SizeSlice[Five] = CardSizeFive
+	CardFace2SizeSlice[Six] = CardSizeSix
+	CardFace2SizeSlice[Seven] = CardSizeSeven
+	CardFace2SizeSlice[Eight] = CardSizeEight
+	CardFace2SizeSlice[Nine] = CardSizeNine
+	CardFace2SizeSlice[Ten] = CardSizeTen
+	CardFace2SizeSlice[Jack] = CardSizeJack
+	CardFace2SizeSlice[Queen] = CardSizeQueen
+	CardFace2SizeSlice[King] = CardSizeKing
+	CardFace2SizeSlice[Ace] = CardSizeAce
+	CardFace2SizeSlice[Joker] = CardSizeJoker
+
+}

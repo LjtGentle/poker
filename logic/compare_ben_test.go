@@ -37,6 +37,10 @@ func BenchmarkCompare(b *testing.B) {
 // 565.0 ns/op
 // 552.0 ns/op
 // 548.1 ns/op
+// mac
+// 355.0 ns/op
+// 353.1 ns/op
+// 354.0 ns/op
 func BenchmarkJudgmentGroupNew_Flush_C1(b *testing.B) {
 	c1 := "3h6c5dAsQd"
 	for i := 0; i < b.N; i++ {
@@ -55,9 +59,16 @@ func BenchmarkJudgmentGroupNew_TwoPair_C2(b *testing.B) {
 	}
 }
 
-// 306.3 ns/op
-// 300.0 ns/op
-// 314.4 ns/op
+// mac
+// 323.0 ns/op
+// 321.2 ns/op
+// 302.1 ns/op
+// 320.3 ns/op
+// 方法2
+// 302.2 ns/op
+// 323.3 ns/op
+// 295.5 ns/op
+// 300.8 ns/op
 
 // windows
 // 372.3 ns/op

@@ -31,10 +31,7 @@ func JudgmentGroupNew(card string) (model.CardType, map[model.CardSize]int, mode
 	if colorLen > 1 {
 		// 非同花
 		switch sizeLen {
-		case 4:
-			// 一对
-			judeCardType = model.OnePair
-			return judeCardType, sizeMap, resMax, cardsSize
+
 		case 2: // 3带2  或是 4带1
 			// 遍历map value
 			judeCardType = model.FullHouse
@@ -54,6 +51,10 @@ func JudgmentGroupNew(card string) (model.CardType, map[model.CardSize]int, mode
 					return judeCardType, sizeMap, resMax, cardsSize
 				}
 			}
+			return judeCardType, sizeMap, resMax, cardsSize
+		case 4:
+			// 一对
+			judeCardType = model.OnePair
 			return judeCardType, sizeMap, resMax, cardsSize
 		case 5:
 			// 单牌或是顺子
@@ -509,15 +510,12 @@ func CardsSplitMapCount(cards string) (map[model.CardSize]int, map[model.CardCol
 	sizeMap := make(map[model.CardSize]int, num)
 	colorsMap := make(map[model.CardColor]int, num)
 	cardsSize := make([]model.CardSize, num)
-	for index, value := range cards {
-		if index%2 == 0 {
-			sv := model.CardFaceMap[model.CardFace(value)]
-			cardsSize[index>>1] = sv
-			sizeMap[sv]++
-		} else {
-			cv := model.CardColor(value)
-			colorsMap[cv]++
-		}
+	var size model.CardSize
+	for i := 0; i < num; i++ {
+		size = model.CardFace2SizeSlice[cards[i<<1]]
+		cardsSize[i] = size
+		sizeMap[size]++
+		colorsMap[model.CardColor(cards[(i<<1)+1])]++
 	}
 	return sizeMap, colorsMap, cardsSize
 }
