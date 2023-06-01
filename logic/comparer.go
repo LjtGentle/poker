@@ -30,7 +30,8 @@ type IComparer interface {
 	// Compare 两幅牌比较
 	Compare(alices, bobs string) model.Result
 	// CardsSplitMapCount 面值转换、手牌面值和花色分隔，并且统计数量
-	CardsSplitMapCount(cards string) (map[model.CardSize]int, map[model.CardColor]int, []model.CardSize)
+	CardsSplitMapCount(cards string) (map[model.CardSize]int, map[model.CardColor]int, []model.CardSize, []model.CardColor)
+	PokerMan()
 }
 
 var pokerFactory = make(map[uint]IComparer)

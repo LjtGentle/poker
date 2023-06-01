@@ -33,7 +33,7 @@ func (b *BaseCardCom) IsStraight(cardsSize []model.CardSize, sizeMap map[model.C
 	}
 	// 判断数组是否连续 倒序遍历
 	sum := 0
-	for i := 0; i < len(saves); i++ {
+	for i := len(saves) - 1; i > 0; i-- {
 		// slice有值
 		if saves[i] == 0x00 {
 			sum = 0
@@ -42,7 +42,7 @@ func (b *BaseCardCom) IsStraight(cardsSize []model.CardSize, sizeMap map[model.C
 			// 5个连续
 			if sum >= 5 {
 				shunZi = true
-				max = saves[i] // 返回顺子的最大值
+				max = saves[i+4] // 返回顺子的最大值
 				return
 			}
 		}
@@ -68,7 +68,7 @@ func (b *BaseCardCom) HighCardCompareByLen(comLen int, cardSizeSlice1, cardSizeS
 }
 
 func (b *BaseCardCom) HighCardCompareCom() model.Result {
-	return b.HighCardCompareByLen(len(b.CardsSize1), b.CardsSize1, b.CardsSize2)
+	return b.HighCardCompareByLen(5, b.CardsSize1, b.CardsSize2)
 }
 
 func (b *BaseCardCom) OnePairCom() model.Result {
@@ -103,21 +103,19 @@ func (b *BaseCardCom) OnePairCom() model.Result {
 		return model.Lose
 	} else {
 		// 再单牌大小
-		return b.HighCardCompareByLen(len(b.CardsSize1)-2, cardSizeSlice1, cardSizeSlice2)
+		return b.HighCardCompareByLen(3, cardSizeSlice1, cardSizeSlice2)
 	}
 
 }
 
 func (b *BaseCardCom) TwoPairCom() model.Result {
 	// 用于存放两对的牌子
-	num := 2
+	num := 4 //兼容7张牌会出现3对的情况
 	pairs1 := make([]model.CardSize, num)
 	pairs2 := make([]model.CardSize, num)
 	// 用于存放单牌
-	num = len(b.CardsSize1) - 4
 	val1s := make([]model.CardSize, num)
 	val2s := make([]model.CardSize, num)
-	var val2 model.CardSize
 
 	i := 0
 	j := 0
@@ -127,57 +125,59 @@ func (b *BaseCardCom) TwoPairCom() model.Result {
 			i++
 			continue
 		}
-		val1 = k
+		val1s[j] = k
+		j++
 	}
 	i = 0
+	j = 0
 	for k, v := range b.CardSizeMap2 {
 		if v == 2 {
 			pairs2[i] = k
 			i++
-		} else {
-			val2 = k
+			continue
 		}
+		val2s[j] = k
+		j++
 
 	}
+
 	// 比较对子的大小
 	var result model.Result
 	result = b.HighCardCompareByLen(2, pairs1, pairs2)
 	if result != 0 {
 		return result
 	}
+	// 三个对子的场景
+	val1s[3] = pairs1[2]
+	val2s[3] = pairs2[2]
 
 	// 再比较单牌的大小
-	if val1 > val2 {
-		return model.Win
-	} else if val1 < val2 {
-		return model.Lose
-	} else {
-		return model.Draw
-	}
+	return b.HighCardCompareByLen(1, val1s, val2s)
 }
 
 func (b *BaseCardCom) ThreeOfAKindCom() model.Result {
 	// 用于存放单牌的面值
-	cardSizeSlice1 := make([]model.CardSize, len(b.CardSizeMap1))
-	cardSizeSlice2 := make([]model.CardSize, len(b.CardSizeMap1))
+	num := len(b.CardsSize1) - 2
+	cardSizeSlice1 := make([]model.CardSize, num)
+	cardSizeSlice2 := make([]model.CardSize, num)
 	// 用于存放三条的面值
 	var three1 model.CardSize
 	var three2 model.CardSize
 	i := 0
 	for k, v := range b.CardSizeMap1 {
-		cardSizeSlice1[i] = k
 		if v == 3 {
 			three1 = k
 		} else {
+			cardSizeSlice1[i] = k
 			i++
 		}
 	}
 	i = 0
 	for k, v := range b.CardSizeMap2 {
-		cardSizeSlice2[i] = k
 		if v == 3 {
 			three2 = k
 		} else {
+			cardSizeSlice2[i] = k
 			i++
 		}
 	}
@@ -188,7 +188,7 @@ func (b *BaseCardCom) ThreeOfAKindCom() model.Result {
 		return model.Lose
 	} else {
 		// 再比较单牌的
-		return b.HighCardCompareByLen(len(cardSizeSlice1)-3, cardSizeSlice1, cardSizeSlice2)
+		return b.HighCardCompareByLen(2, cardSizeSlice1, cardSizeSlice2)
 	}
 }
 
@@ -239,44 +239,61 @@ func (b *BaseCardCom) FourHouseCom() model.Result {
 	} else if four1 < four2 {
 		return model.Lose
 	} else {
-		return b.HighCardCompareByLen(num, val1s, val2s)
+		return b.HighCardCompareByLen(1, val1s, val2s)
 	}
 }
 
 func (b *BaseCardCom) FullHouseCom() model.Result {
-	var three1 model.CardSize
-	var three2 model.CardSize
+	threes1 := make([]model.CardSize, 2)
+	threes2 := make([]model.CardSize, 2)
 	// 存放对子的面值
-	var two1 model.CardSize
-	var two2 model.CardSize
+	twos1 := make([]model.CardSize, 2)
+	twos2 := make([]model.CardSize, 2)
+	i := 0
+	j := 0
 	for k, v := range b.CardSizeMap1 {
 		if v == 3 {
-			three1 = k
-		} else {
-			two1 = k
+			threes1[i] = k
+			i++
+			continue
+		}
+		if v == 2 {
+			twos1[j] = k
+			j++
 		}
 	}
+	i = 0
+	j = 0
 	for k, v := range b.CardSizeMap2 {
 		if v == 3 {
-			three2 = k
-		} else {
-			two2 = k
+			threes2[i] = k
+			i++
+			continue
+		}
+		if v == 2 {
+			twos2[j] = k
+			j++
+		}
+	}
+	// 如果有两个三对的情况
+	if threes1[1] != 0x00 {
+		twos1[1] = threes1[0]
+		if threes1[1] < threes1[0] {
+			twos1[1] = threes1[1]
+		}
+	}
+	if threes2[1] != 0x00 {
+		twos2[1] = threes2[0]
+		if threes2[1] < threes2[0] {
+			twos2[1] = threes2[1]
 		}
 	}
 	// 先对比3条的面值
-	if three1 > three2 {
-		return model.Win
-	} else if three1 < three2 {
-		return model.Lose
+	if result := b.HighCardCompareByLen(1, threes1, threes2); result != model.Draw {
+		return result
 	} else {
 		// 再对比对子的面值
-		if two1 > two2 {
-			return model.Win
-		} else if two1 < two2 {
-			return model.Lose
-		} else {
-			return model.Draw
-		}
+		return b.HighCardCompareByLen(1, twos1, twos2)
 	}
 }
 
@@ -334,17 +351,27 @@ func (b *BaseCardCom) Compare(alices, bobs string) model.Result {
 	// 最后比较结果
 }
 
-func (b *BaseCardCom) CardsSplitMapCount(cards string) (map[model.CardSize]int, map[model.CardColor]int, []model.CardSize) {
+func (b *BaseCardCom) CardsSplitMapCount(cards string) (
+	map[model.CardSize]int, map[model.CardColor]int, []model.CardSize, []model.CardColor) {
 	num := len(cards) >> 1
 	sizeMap := make(map[model.CardSize]int, num)
 	colorsMap := make(map[model.CardColor]int, num)
 	cardsSize := make([]model.CardSize, num)
+	colorsSlice := make([]model.CardColor, num)
 	var size model.CardSize
+	var colors model.CardColor
 	for i := 0; i < num; i++ {
 		size = model.CardFace2SizeSlice[cards[i<<1]]
 		cardsSize[i] = size
 		sizeMap[size]++
-		colorsMap[model.CardColor(cards[(i<<1)+1])]++
+		colors = model.CardColor(cards[(i<<1)+1])
+		colorsMap[colors]++
+		colorsSlice[i] = colors
 	}
-	return sizeMap, colorsMap, cardsSize
+	return sizeMap, colorsMap, cardsSize, colorsSlice
+}
+
+func (b *BaseCardCom) PokerMan() {
+	//TODO implement me
+	panic("implement me")
 }
