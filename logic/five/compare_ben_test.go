@@ -1,13 +1,12 @@
-package logic
+package five
 
 import (
 	"poker/dao"
-	"poker/model"
 	"testing"
 )
 
 func BenchmarkRead(b *testing.B) {
-	file := GetCurrentAbPathByCaller()
+	file := dao.GetCurrentAbPathByCaller()
 	file += "/resources/match_result.json"
 	for i := 0; i < b.N; i++ {
 		dao.ReadFile(file)
@@ -85,12 +84,12 @@ func BenchmarkCardsSplitMapCount(b *testing.B) {
 // 18.39 ns/op
 // 19.80 ns/op
 // 19.58 ns/op
-func BenchmarkSizeTranByte(b *testing.B) {
-	card := 'A'
-	for i := 0; i < b.N; i++ {
-		SizeTranByte(model.CardFace(card))
-	}
-}
+//func BenchmarkSizeTranByte(b *testing.B) {
+//	card := 'A'
+//	for i := 0; i < b.N; i++ {
+//		SizeTranByte(model.CardFace(card))
+//	}
+//}
 
 // mac
 // 25.91 ns/op

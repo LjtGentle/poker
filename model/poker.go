@@ -100,23 +100,6 @@ const (
 	CardSizeJoker CardSize = 0x10
 )
 
-var CardFaceMap = map[CardFace]CardSize{
-	Two:   CardSizeTwo,
-	Three: CardSizeThree,
-	Four:  CardSizeFour,
-	Five:  CardSizeFive,
-	Six:   CardSizeSix,
-	Seven: CardSizeSeven,
-	Eight: CardSizeEight,
-	Nine:  CardSizeNine,
-	Ten:   CardSizeTen,
-	Jack:  CardSizeJack,
-	Queen: CardSizeQueen,
-	King:  CardSizeKing,
-	Ace:   CardSizeAce,
-	Joker: CardSizeJoker,
-}
-
 var CardFace2SizeSlice []CardSize
 
 func init() {
@@ -135,5 +118,10 @@ func init() {
 	CardFace2SizeSlice[King] = CardSizeKing
 	CardFace2SizeSlice[Ace] = CardSizeAce
 	CardFace2SizeSlice[Joker] = CardSizeJoker
-
 }
+
+const (
+	FiveGameType uint = iota + 1
+	SevenGameType
+	SevenAndJokerGameType
+)
