@@ -2,9 +2,16 @@ package five
 
 import (
 	"poker/dao"
+	"poker/logic"
+	"poker/model"
 	"testing"
 )
 
+var f logic.IComparer
+
+func init() {
+	f = logic.GetPoker(model.FiveGameType)
+}
 func BenchmarkRead(b *testing.B) {
 	file := dao.GetCurrentAbPathByCaller()
 	file += "/resources/match_result.json"
@@ -15,7 +22,7 @@ func BenchmarkRead(b *testing.B) {
 
 func BenchmarkPokerMain(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		PokerMan()
+		f.PokerMan()
 	}
 }
 
@@ -27,8 +34,9 @@ func BenchmarkPokerMain(b *testing.B) {
 func BenchmarkCompare(b *testing.B) {
 	c1 := "3h6c5dAsQd"
 	c2 := "Qs7d7hQcTs"
+	f := logic.GetPoker(model.FiveGameType)
 	for i := 0; i < b.N; i++ {
-		compare(c1, c2)
+		f.Compare(c1, c2)
 	}
 }
 
@@ -43,7 +51,7 @@ func BenchmarkCompare(b *testing.B) {
 func BenchmarkJudgmentGroupNew_Flush_C1(b *testing.B) {
 	c1 := "3h6c5dAsQd"
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(c1)
+		f.JudgmentCardType(c1)
 	}
 }
 
@@ -54,7 +62,7 @@ func BenchmarkJudgmentGroupNew_Flush_C1(b *testing.B) {
 func BenchmarkJudgmentGroupNew_TwoPair_C2(b *testing.B) {
 	c2 := "Qs7d7hQcTs"
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(c2)
+		f.JudgmentCardType(c2)
 	}
 }
 
@@ -76,7 +84,7 @@ func BenchmarkJudgmentGroupNew_TwoPair_C2(b *testing.B) {
 func BenchmarkCardsSplitMapCount(b *testing.B) {
 	cards := "AhKhQhJhTh"
 	for i := 0; i < b.N; i++ {
-		CardsSplitMapCount(cards)
+		f.CardsSplitMapCount(cards)
 	}
 }
 
@@ -106,9 +114,9 @@ func BenchmarkCardsSplitMapCount(b *testing.B) {
 // 33.29 ns/op
 func BenchmarkIsShunZiNew_true(b *testing.B) {
 	cards := "AhKhQhJhTh"
-	sizeMap, _, cardsSize := CardsSplitMapCount(cards)
+	sizeMap, _, cardsSize, _ := f.CardsSplitMapCount(cards)
 	for i := 0; i < b.N; i++ {
-		IsShunZiNew(cardsSize, sizeMap)
+		f.IsStraight(cardsSize, sizeMap)
 	}
 }
 
@@ -126,9 +134,9 @@ func BenchmarkIsShunZiNew_true(b *testing.B) {
 // 33.28 ns/op
 func BenchmarkIsShunZiNew_false(b *testing.B) {
 	cards := "6hKhQhJhTh"
-	sizeMap, _, cardsSize := CardsSplitMapCount(cards)
+	sizeMap, _, cardsSize, _ := f.CardsSplitMapCount(cards)
 	for i := 0; i < b.N; i++ {
-		IsShunZiNew(cardsSize, sizeMap)
+		f.IsStraight(cardsSize, sizeMap)
 	}
 }
 
@@ -140,7 +148,7 @@ func BenchmarkJudgmentGroupNew_RoyalFlush(b *testing.B) {
 	cards := "AhKhQhJhTh"
 
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(cards)
+		f.JudgmentCardType(cards)
 	}
 }
 
@@ -152,7 +160,7 @@ func BenchmarkJudgmentGroupNew_StraightFlush(b *testing.B) {
 	cards := "KhQhJhTh9h"
 
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(cards)
+		f.JudgmentCardType(cards)
 	}
 }
 
@@ -164,7 +172,7 @@ func BenchmarkJudgmentGroupNew_FourHouse(b *testing.B) {
 	cards := "KhKhKhKd9c"
 
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(cards)
+		f.JudgmentCardType(cards)
 	}
 }
 
@@ -176,7 +184,7 @@ func BenchmarkJudgmentGroupNew_FullHouse(b *testing.B) {
 	cards := "KhKhKhQdQc"
 
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(cards)
+		f.JudgmentCardType(cards)
 	}
 }
 
@@ -188,6 +196,6 @@ func BenchmarkJudgmentGroupNew_Flush(b *testing.B) {
 	cards := "Ah3hKhQhQh"
 
 	for i := 0; i < b.N; i++ {
-		JudgmentGroupNew(cards)
+		f.JudgmentCardType(cards)
 	}
 }
