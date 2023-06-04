@@ -14,6 +14,24 @@ func BenchmarkPokerMan(b *testing.B) {
 	}
 }
 
+func BenchmarkSevenCom_JudgmentCardType(b *testing.B) {
+	s := sevenCom{}
+	for i := 0; i < b.N; i++ {
+		s.JudgmentCardType("5dQh4h3h7c6d8c")
+	}
+}
+
+// 381.1 ns/op
+// 385.7 ns/op
+// 385.1 ns/op
+func BenchmarkSplit(b *testing.B) {
+	s := &logic.BaseCardCom{}
+	card := "5dQh4h3h7c6d8c"
+	for i := 0; i < b.N; i++ {
+		s.CardsSplitMapCount(card)
+	}
+}
+
 func TestPokerMan(t *testing.T) {
 	s := logic.GetPoker(model.SevenGameType)
 	s.PokerMan()
